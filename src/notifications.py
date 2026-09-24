@@ -1,14 +1,19 @@
-﻿"""Notification service — called by orders and users. NO TEST FILE EXISTS."""
+﻿"""Notification service — called by orders and users."""
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
+def _deliver_email(to: str, subject: str, body: str) -> bool:
+    """Underlying email transport. Accepts body; does not log it (may contain secrets)."""
+    logger.info("Sending email to %s: %s", to, subject)
+    return True
+
+
 def send_email(to: str, subject: str, body: str) -> bool:
     """Send an email notification."""
-    logger.info(f"Sending email to {to}: {subject}")
-    return True
+    return _deliver_email(to, subject, body)
 
 
 def send_sms(phone: str, message: str) -> bool:
