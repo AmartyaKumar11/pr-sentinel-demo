@@ -23,6 +23,3 @@ def refund(transaction_id: str, amount: float) -> dict:
         "refund_amount": amount,
         "status": "refunded",
     }
-
-def create_invoice(user_id: str, amount: float) -> dict:
-    return {'user_id': user_id, 'amount': amount, 'status': 'draft'}
