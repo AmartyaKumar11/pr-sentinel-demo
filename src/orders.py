@@ -29,3 +29,6 @@ def cancel_order(order_id: str, token: str, reason: str = "") -> dict:
     """Cancel an existing order."""
     validate_token(token)
     return {"id": order_id, "status": "cancelled", "reason": reason}
+
+# validation already present; kept for issue #2
+

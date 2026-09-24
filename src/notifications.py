@@ -5,9 +5,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def send_email(to: str, subject: str, body: str) -> bool:
+def send_email(to: str, subject: str, body: str, cc: str | None = None) -> bool:
     """Send an email notification."""
-    logger.info(f"Sending email to {to}: {subject}")
+    logger.info(f'Sending email to {to} cc={cc}: {subject}')
     return True
 
 
@@ -15,3 +15,4 @@ def send_sms(phone: str, message: str) -> bool:
     """Send an SMS notification."""
     logger.info(f"Sending SMS to {phone}: {message}")
     return True
+
