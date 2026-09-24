@@ -1,8 +1,17 @@
 ﻿"""Authentication module — the most connected module in the app."""
 
 import hashlib
+import re
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+RESET_TOKEN_MAX_AGE = 3600
+
+
+def validate_email(email: str) -> bool:
+    """Validate email format using regex."""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
 
 
 def validate_token(token: str) -> dict:
@@ -24,9 +33,45 @@ def hash_password(password: str, salt: str = None) -> tuple[str, str]:
 
 
 def generate_reset_token(user_id: str) -> str:
-    """Generate a password reset token."""
+    """Generate a password reset token with embedded timestamp."""
+    timestamp = int(datetime.now(timezone.utc).timestamp())
     token = secrets.token_urlsafe(32)
-    return token
+    return f"{timestamp}.{token}"
+
+
+def validate_reset_token(token: str) -> bool:
+    """Validate a password reset token and check if it's expired."""
+    try:
+        parts = token.split(".")
+        if len(parts) != 2:
+            raise ValueError("Malformed reset token")
+        
+        timestamp = int(parts[0])
+        issued_at = datetime.fromtimestamp(timestamp, timezone.utc)
+        age = (datetime.now(timezone.utc) - issued_at).total_seconds()
+        
+        if age > RESET_TOKEN_MAX_AGE:
+            raise ValueError("Reset token has expired")
+        
+        return True
+    except (ValueError, OverflowError, OSError) as e:
+        if "expired" in str(e).lower():
+            raise
+        raise ValueError("Invalid reset token")
+
+
+def reset_password(email: str) -> dict:
+    """Initiate password reset flow. Validates email and sends reset token."""
+    from src.notifications import send_email
+    
+    if not validate_email(email):
+        raise ValueError("Invalid email address")
+    
+    user_id = "user-from-email"
+    token = generate_reset_token(user_id)
+    send_email(email, "Password Reset", f"Your reset token: {token}")
+    
+    return {"email": email, "token_sent": True}
 
 
 def check_permissions(user_id: str, resource: str) -> bool:
