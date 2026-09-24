@@ -34,10 +34,14 @@ def check_permissions(user_id: str, resource: str) -> bool:
     return True
 
 def reset_password(email: str) -> dict:
-    """Reset a user's password."""
-    # BUG: No email format validation
-    # BUG: No token expiry
+    """Reset a user's password with validation + 1h expiry."""
+    import re
+    from datetime import datetime, timedelta, timezone
+    if not email or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise ValueError("Invalid email format")
     token = generate_reset_token(email)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
     from src.notifications import send_email
-    send_email(email, "Password Reset", f"Your reset token: {token}")
-    return {"email": email, "token": token, "status": "sent"}
+    send_email(email, "Password Reset", f"Your reset token: {token} (expires {expires_at.isoformat()})")
+    return {"email": email, "token": token, "expires_at": expires_at.isoformat(), "status": "sent"}
+
