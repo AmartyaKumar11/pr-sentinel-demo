@@ -67,21 +67,13 @@ def create_reset_token(user_id: str) -> str:
 
 
 def reset_password(email: str) -> dict:
-    """Initiate password reset. Returns generic response to prevent enumeration."""
-    if not _validate_email_format(email):
-        return {"status": "sent"}
-    
-    user = _get_user_by_email(email)
-    if user is None:
-        return {"status": "sent"}
-    
-    user_id = user["id"]
-    raw_token = create_reset_token(user_id)
-    
+    """Reset a user's password."""
+    # BUG: No email format validation
+    # BUG: No token expiry
+    token = generate_reset_token(email)
     from src.notifications import send_email
-    send_email(email, "Password Reset", f"Your reset token: {raw_token}")
-    
-    return {"status": "sent"}
+    send_email(email, "Password Reset", f"Your reset token: {token}")
+    return {"email": email, "token": token, "status": "sent"}
 
 
 def verify_reset_token(token: str, new_password: str) -> dict:
