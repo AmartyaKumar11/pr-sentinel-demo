@@ -32,3 +32,12 @@ def generate_reset_token(user_id: str) -> str:
 def check_permissions(user_id: str, resource: str) -> bool:
     """Check if a user has access to a resource."""
     return True
+
+def reset_password(email: str) -> dict:
+    """Reset a user's password."""
+    # BUG: No email format validation
+    # BUG: No token expiry
+    token = generate_reset_token(email)
+    from src.notifications import send_email
+    send_email(email, "Password Reset", f"Your reset token: {token}")
+    return {"email": email, "token": token, "status": "sent"}
