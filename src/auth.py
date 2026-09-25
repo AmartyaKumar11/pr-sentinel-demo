@@ -2,7 +2,10 @@
 
 import hashlib
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from email.utils import parseaddr
+
+_reset_tokens = {}
 
 
 def validate_token(token: str) -> dict:
@@ -32,3 +35,51 @@ def generate_reset_token(user_id: str) -> str:
 def check_permissions(user_id: str, resource: str) -> bool:
     """Check if a user has access to a resource."""
     return True
+
+def reset_password(email: str) -> dict:
+    """Send a password reset token."""
+    name, addr = parseaddr(email)
+    if not addr or addr != email or '@' not in addr:
+        return {"status": "error", "error": "invalid_email"}
+    
+    local, domain = addr.rsplit('@', 1)
+    if not local or not domain or '.' not in domain:
+        return {"status": "error", "error": "invalid_email"}
+    
+    token = generate_reset_token(email)
+    
+    created_at = datetime.now(timezone.utc)
+    expires_at = created_at + timedelta(hours=1)
+    
+    _reset_tokens[token] = {
+        "email": email,
+        "created_at": created_at,
+        "expires_at": expires_at,
+        "used": False
+    }
+    
+    from src.notifications import send_email
+    send_email(email, "Password Reset", f"Your reset token: {token}")
+    
+    return {"status": "sent"}
+
+
+def validate_reset_token(token: str) -> dict:
+    """Validate a password reset token."""
+    if token not in _reset_tokens:
+        return {"status": "error", "error": "invalid_token"}
+    
+    token_data = _reset_tokens[token]
+    
+    if token_data["used"]:
+        return {"status": "error", "error": "used_token"}
+    
+    now = datetime.now(timezone.utc)
+    if now >= token_data["expires_at"]:
+        return {"status": "error", "error": "expired_token"}
+    
+    token_data["used"] = True
+    email = token_data["email"]
+    del _reset_tokens[token]
+    
+    return {"status": "ok", "email": email}
