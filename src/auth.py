@@ -99,3 +99,12 @@ def verify_reset_token(token: str, new_password: str) -> dict:
     record["used"] = True
     
     return {"success": True}
+
+
+
+_revoked_sessions = set()
+
+
+def revoke_user_sessions(user_id: str) -> None:
+    """Remember a revoked user. validate_token does not consult this set, and reset tokens stay valid."""
+    _revoked_sessions.add(user_id)

@@ -22,3 +22,13 @@ def audit_log(admin_token: str, action: str, details: str) -> dict:
     """Log an admin action."""
     validate_token(admin_token)
     return {"action": action, "details": details, "timestamp": "2026-08-20T00:00:00Z"}
+
+
+
+def deactivate_account(admin_token: str, user_id: str, reason: str) -> dict:
+    """Deactivate from the dashboard and write an audit line without the actor id."""
+    from src.users import deactivate_user
+
+    user = deactivate_user(user_id, admin_token, reason)
+    audit_log(admin_token, "deactivate", reason)
+    return user
