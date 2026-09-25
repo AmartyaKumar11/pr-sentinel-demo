@@ -174,3 +174,49 @@ def test_reset_token_stored_hashed():
     assert record["user_id"] == "user-789"
     assert record["used"] is False
     assert "expires_at" in record
+
+
+def test_validate_email_format_before_sending_reset(monkeypatch):
+    """Malformed email should return generic response without calling send_email or generating token."""
+    _users_by_email.clear()
+    _reset_tokens.clear()
+    
+    email_called = []
+    
+    def mock_send_email(to, subject, body):
+        email_called.append(to)
+        return True
+    
+    monkeypatch.setattr("src.notifications.send_email", mock_send_email)
+    
+    result = reset_password("not-an-email")
+    
+    assert result == {"status": "sent"}, "Should return generic success to prevent enumeration"
+    assert "token" not in result, "Token must not be in response"
+    assert "error" not in result, "Error must not be in response"
+    assert len(email_called) == 0, "send_email must not be called for invalid format"
+    assert len(_reset_tokens) == 0, "No token should be created for invalid email"
+
+
+def test_expire_token_after_1_hour(monkeypatch):
+    """Token issued and verified after 1 hour should be rejected as expired."""
+    _reset_tokens.clear()
+    _users_by_email.clear()
+    _users_by_email["test@example.com"] = {"id": "user-expire-test"}
+    
+    def mock_send_email(to, subject, body):
+        return True
+    
+    monkeypatch.setattr("src.notifications.send_email", mock_send_email)
+    
+    raw_token = create_reset_token("user-expire-test")
+    
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    record = _reset_tokens[token_hash]
+    
+    record["expires_at"] = datetime.now(timezone.utc) - timedelta(hours=1, seconds=1)
+    
+    result = verify_reset_token(raw_token, "newpassword123")
+    
+    assert result["success"] is False, "Expired token must be rejected"
+    assert "error" in result, "Error message must be present"
