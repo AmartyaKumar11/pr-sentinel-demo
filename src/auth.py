@@ -83,5 +83,7 @@ def validate_reset_token(token: str) -> dict:
             return {"status": "error", "error": "expired_token"}
         
         token_data["used"] = True
+        email = token_data["email"]
+        del _reset_tokens[token]
         
-        return {"status": "ok", "email": token_data["email"]}
+        return {"status": "ok", "email": email}
