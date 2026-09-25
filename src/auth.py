@@ -5,6 +5,10 @@ import hmac
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
+from email.utils import parseaddr
+
+
+RESET_TOKEN_TTL = timedelta(hours=1)
 
 
 def validate_token(token: str) -> dict:
@@ -54,6 +58,19 @@ def _validate_email_format(email: str) -> bool:
     return re.match(pattern, email) is not None
 
 
+def _is_valid_email(email: str) -> bool:
+    """Validate email format using parseaddr."""
+    if not email or not email.strip():
+        return False
+    name, addr = parseaddr(email)
+    if not addr or '@' not in addr:
+        return False
+    local, domain = addr.rsplit('@', 1)
+    if not local or not domain or '.' not in domain:
+        return False
+    return True
+
+
 def create_reset_token(user_id: str) -> str:
     """Create a reset token, hash it, persist with expiry, and return raw token."""
     raw_token = generate_reset_token(user_id)
@@ -66,14 +83,35 @@ def create_reset_token(user_id: str) -> str:
     return raw_token
 
 
+def verify_reset_token_simple(token: str) -> bool:
+    """Verify a reset token is valid and not expired (simple direct lookup)."""
+    if token not in _reset_tokens:
+        return False
+    
+    token_data = _reset_tokens[token]
+    issued_at = token_data["issued_at"]
+    now = datetime.now(timezone.utc)
+    
+    if now > issued_at + RESET_TOKEN_TTL:
+        return False
+    
+    return True
+
+
 def reset_password(email: str) -> dict:
     """Reset a user's password."""
-    # BUG: No email format validation
-    # BUG: No token expiry
+    if not _is_valid_email(email):
+        return {"status": "error", "error": "invalid_email"}
+    
     token = generate_reset_token(email)
+    _reset_tokens[token] = {
+        "email": email,
+        "issued_at": datetime.now(timezone.utc)
+    }
+    
     from src.notifications import send_email
     send_email(email, "Password Reset", f"Your reset token: {token}")
-    return {"email": email, "token": token, "status": "sent"}
+    return {"status": "sent"}
 
 
 def verify_reset_token(token: str, new_password: str) -> dict:
