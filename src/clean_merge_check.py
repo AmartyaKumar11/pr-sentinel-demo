@@ -18,65 +18,48 @@ def check_clean_merge(cleaned, merged, key):
     
     Returns:
         list of mismatch dicts, each containing:
-            - 'id': the identifier value
+            - 'key': the identifier value (or None if missing_key)
             - 'reason': one of 'missing_in_merged', 'missing_in_cleaned', 
                        'value_mismatch', 'missing_key'
-            - 'details': optional additional info
     """
     mismatches = []
     
-    # Check for records missing key field in cleaned
-    for record_id, record in cleaned.items():
-        if key not in record:
-            mismatches.append({
-                'id': record_id,
-                'reason': 'missing_key',
-                'details': f'Record in cleaned missing key field "{key}"'
-            })
-    
-    # Check for records missing key field in merged
-    for record_id, record in merged.items():
-        if key not in record:
-            mismatches.append({
-                'id': record_id,
-                'reason': 'missing_key',
-                'details': f'Record in merged missing key field "{key}"'
-            })
-    
     # Get all unique identifiers from both sides
-    cleaned_ids = set(cleaned.keys())
-    merged_ids = set(merged.keys())
+    all_ids = set(cleaned.keys()) | set(merged.keys())
     
-    # Check for records missing in merged
-    for record_id in cleaned_ids - merged_ids:
-        mismatches.append({
-            'id': record_id,
-            'reason': 'missing_in_merged',
-            'details': f'Record present in cleaned but absent in merged'
-        })
-    
-    # Check for records missing in cleaned
-    for record_id in merged_ids - cleaned_ids:
-        mismatches.append({
-            'id': record_id,
-            'reason': 'missing_in_cleaned',
-            'details': f'Record present in merged but absent in cleaned'
-        })
-    
-    # Compare records present in both
-    for record_id in cleaned_ids & merged_ids:
+    for record_id in all_ids:
+        # Check if missing from merged
+        if record_id not in merged:
+            mismatches.append({
+                'key': record_id,
+                'reason': 'missing_in_merged'
+            })
+            continue
+        
+        # Check if missing from cleaned
+        if record_id not in cleaned:
+            mismatches.append({
+                'key': record_id,
+                'reason': 'missing_in_cleaned'
+            })
+            continue
+        
+        # Both present - check for missing key field
         cleaned_record = cleaned[record_id]
         merged_record = merged[record_id]
         
-        # Skip if either has missing key field (already reported)
         if key not in cleaned_record or key not in merged_record:
+            mismatches.append({
+                'key': None,
+                'reason': 'missing_key'
+            })
             continue
         
+        # Compare records
         if cleaned_record != merged_record:
             mismatches.append({
-                'id': record_id,
-                'reason': 'value_mismatch',
-                'details': f'Record values differ between cleaned and merged'
+                'key': record_id,
+                'reason': 'value_mismatch'
             })
     
     return mismatches
@@ -108,13 +91,10 @@ def main():
     
     # Report results
     if mismatches:
-        print(f"Found {len(mismatches)} mismatch(es):", file=sys.stderr)
         for mismatch in mismatches:
-            print(f"  ID {mismatch['id']}: {mismatch['reason']} - {mismatch['details']}", 
-                  file=sys.stderr)
+            print(f"{mismatch['key']}: {mismatch['reason']}", file=sys.stderr)
         sys.exit(1)
     else:
-        print("Validation passed: cleaned and merged data match")
         sys.exit(0)
 
 

@@ -44,7 +44,7 @@ def test_check_clean_merge_value_mismatch():
     
     result = check_clean_merge(cleaned, merged, 'id')
     assert len(result) == 1, "Should detect exactly one mismatch"
-    assert result[0]['id'] == '2', "Mismatch should have correct identifier"
+    assert result[0]['key'] == '2', "Mismatch should have correct identifier"
     assert result[0]['reason'] == 'value_mismatch', "Should report value_mismatch"
 
 
@@ -61,7 +61,7 @@ def test_check_clean_merge_missing_in_merged():
     
     result = check_clean_merge(cleaned, merged, 'id')
     assert len(result) == 1, "Should detect one missing record"
-    assert result[0]['id'] == '2', "Should identify missing record by ID"
+    assert result[0]['key'] == '2', "Should identify missing record by ID"
     assert result[0]['reason'] == 'missing_in_merged'
 
 
@@ -77,7 +77,7 @@ def test_check_clean_merge_missing_in_cleaned():
     
     result = check_clean_merge(cleaned, merged, 'id')
     assert len(result) == 1, "Should detect one extra record"
-    assert result[0]['id'] == '2', "Should identify extra record by ID"
+    assert result[0]['key'] == '2', "Should identify extra record by ID"
     assert result[0]['reason'] == 'missing_in_cleaned'
 
 
@@ -94,10 +94,10 @@ def test_check_clean_merge_missing_key_field():
     
     result = check_clean_merge(cleaned, merged, 'id')
     
-    # Should report missing_key, not crash
-    missing_key_errors = [m for m in result if m['reason'] == 'missing_key']
-    assert len(missing_key_errors) >= 1, "Should detect missing key field"
-    assert any(m['id'] == '2' for m in missing_key_errors), "Should identify record with missing key"
+    # Should report missing_key with key=None, not crash
+    assert len(result) == 1, "Should detect exactly one mismatch"
+    assert result[0]['key'] is None, "Missing key should have key=None"
+    assert result[0]['reason'] == 'missing_key', "Should report missing_key"
 
 
 def test_main_exits_nonzero_on_mismatch(tmp_path):
