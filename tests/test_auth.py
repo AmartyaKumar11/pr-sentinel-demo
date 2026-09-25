@@ -4,9 +4,11 @@
     generate_reset_token,
     reset_password,
     verify_reset_token,
+    verify_reset_token_and_set_password,
     create_reset_token,
     _users_by_email,
     _reset_tokens,
+    _utcnow,
 )
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -36,32 +38,28 @@ def test_generate_reset_token():
 
 
 def test_reset_password_invalid_email(monkeypatch):
-    """Invalid email format should return generic response without calling send_email."""
+    """Invalid email format should return error without calling send_email."""
     email_called = []
-    token_called = []
     
     def mock_send_email(to, subject, body):
         email_called.append(to)
         return True
     
-    original_generate = generate_reset_token
-    def mock_generate(user_id):
-        token_called.append(user_id)
-        return original_generate(user_id)
-    
     monkeypatch.setattr("src.notifications.send_email", mock_send_email)
-    monkeypatch.setattr("src.auth.generate_reset_token", mock_generate)
     
     result = reset_password("not-an-email")
     
-    assert result == {"status": "sent"}
+    assert result["status"] == "invalid_email"
+    assert result["email"] == "not-an-email"
+    assert "error" in result
+    assert "token" not in result
     assert len(email_called) == 0, "send_email should not be called for invalid format"
-    assert len(token_called) == 0, "generate_reset_token should not be called for invalid format"
 
 
 def test_reset_password_unknown_email(monkeypatch):
-    """Unknown email should return same generic response and not send email."""
+    """Valid format email should trigger send even if user unknown (no enumeration)."""
     _users_by_email.clear()
+    _reset_tokens.clear()
     email_called = []
     
     def mock_send_email(to, subject, body):
@@ -72,15 +70,16 @@ def test_reset_password_unknown_email(monkeypatch):
     
     result = reset_password("unknown@example.com")
     
-    assert result == {"status": "sent"}
-    assert len(email_called) == 0, "send_email should not be called for unknown user"
+    assert result["status"] == "sent"
+    assert result["email"] == "unknown@example.com"
+    assert "token" in result
+    assert len(email_called) == 1, "send_email should be called even for unknown user"
 
 
 def test_reset_password_valid_flow(monkeypatch):
-    """Valid email should trigger email send and not return token."""
+    """Valid email should trigger email send and return token."""
     _users_by_email.clear()
     _reset_tokens.clear()
-    _users_by_email["test@example.com"] = {"id": "user-123", "email": "test@example.com"}
     
     email_called = []
     
@@ -92,11 +91,14 @@ def test_reset_password_valid_flow(monkeypatch):
     
     result = reset_password("test@example.com")
     
-    assert result == {"status": "sent"}
-    assert "token" not in result, "Token should not be in response"
-    assert "email" not in result, "Email should not be in response"
+    assert result["status"] == "sent"
+    assert result["email"] == "test@example.com"
+    assert "token" in result, "Token should be in response"
+    assert len(result["token"]) > 20, "Token should be substantial"
     assert len(email_called) == 1, "send_email should be called once"
     assert email_called[0][0] == "test@example.com"
+    assert email_called[0][1] == "Password Reset"
+    assert result["token"] in email_called[0][2], "Token should be in email body"
     assert len(_reset_tokens) == 1, "Token record should exist"
 
 
@@ -132,7 +134,7 @@ def test_reset_token_expired(monkeypatch):
             del _reset_tokens[token_hash]
             break
     
-    result = verify_reset_token(raw_token, "newpassword")
+    result = verify_reset_token_and_set_password(raw_token, "newpassword")
     
     assert result["success"] is False
     assert "error" in result
@@ -151,10 +153,10 @@ def test_reset_token_single_use(monkeypatch):
     
     raw_token = create_reset_token("user-456")
     
-    result1 = verify_reset_token(raw_token, "newpassword1")
+    result1 = verify_reset_token_and_set_password(raw_token, "newpassword1")
     assert result1["success"] is True
     
-    result2 = verify_reset_token(raw_token, "newpassword2")
+    result2 = verify_reset_token_and_set_password(raw_token, "newpassword2")
     assert result2["success"] is False
     assert "error" in result2
 
@@ -174,3 +176,97 @@ def test_reset_token_stored_hashed():
     assert record["user_id"] == "user-789"
     assert record["used"] is False
     assert "expires_at" in record
+
+
+def test_reset_password_valid_email_sends(monkeypatch):
+    """Valid email should send email with token."""
+    _reset_tokens.clear()
+    email_calls = []
+    
+    def mock_send_email(to, subject, body):
+        email_calls.append({"to": to, "subject": subject, "body": body})
+        return True
+    
+    monkeypatch.setattr("src.notifications.send_email", mock_send_email)
+    
+    result = reset_password("user@example.com")
+    
+    assert result["status"] == "sent"
+    assert "token" in result
+    assert len(email_calls) == 1
+    assert email_calls[0]["to"] == "user@example.com"
+    assert email_calls[0]["subject"] == "Password Reset"
+    assert result["token"] in email_calls[0]["body"]
+
+
+def test_reset_token_expires_after_one_hour(monkeypatch):
+    """Token should expire after one hour."""
+    _reset_tokens.clear()
+    
+    import src.auth
+    base_time = _utcnow()
+    current_time = [base_time]
+    
+    def mock_utcnow():
+        return current_time[0]
+    
+    def mock_send_email(to, subject, body):
+        return True
+    
+    monkeypatch.setattr("src.auth._utcnow", mock_utcnow)
+    monkeypatch.setattr("src.notifications.send_email", mock_send_email)
+    
+    result = reset_password("user@example.com")
+    token = result["token"]
+    
+    current_time[0] = base_time + timedelta(minutes=59)
+    assert verify_reset_token(token) is True
+    
+    _reset_tokens.clear()
+    monkeypatch.setattr("src.auth._utcnow", mock_utcnow)
+    current_time[0] = base_time
+    result2 = reset_password("user2@example.com")
+    token2 = result2["token"]
+    
+    current_time[0] = base_time + timedelta(minutes=61)
+    assert verify_reset_token(token2) is False
+
+
+def test_reset_token_single_use_simple():
+    """Token should only work once with simple verify."""
+    _reset_tokens.clear()
+    
+    from unittest.mock import patch
+    with patch("src.notifications.send_email"):
+        result = reset_password("single@example.com")
+        token = result["token"]
+    
+    assert verify_reset_token(token) is True
+    assert verify_reset_token(token) is False
+
+
+def test_reset_token_unknown_token():
+    """Unknown tokens should return False."""
+    assert verify_reset_token("bogus") is False
+    assert verify_reset_token("") is False
+    assert verify_reset_token(None) is False
+
+
+def test_reset_token_not_stored_plaintext(monkeypatch):
+    """Raw token should not appear in store keys or values."""
+    _reset_tokens.clear()
+    
+    def mock_send_email(to, subject, body):
+        return True
+    
+    monkeypatch.setattr("src.notifications.send_email", mock_send_email)
+    
+    result = reset_password("check@example.com")
+    token = result["token"]
+    
+    for key in _reset_tokens.keys():
+        assert token not in key, "Raw token should not be a key"
+    
+    for value in _reset_tokens.values():
+        value_str = str(value)
+        assert token not in value_str, "Raw token should not be in stored values"

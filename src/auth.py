@@ -5,6 +5,47 @@ import hmac
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
+from email.utils import parseaddr
+
+
+RESET_TOKEN_TTL = timedelta(hours=1)
+
+
+def _utcnow() -> datetime:
+    """Return current UTC time. Separated for test mocking."""
+    return datetime.now(timezone.utc)
+
+
+def _normalize_email(email: str) -> str | None:
+    """Normalize email by stripping whitespace and validating domain format."""
+    if not isinstance(email, str):
+        return None
+    email = email.strip()
+    if not email or '@' not in email:
+        return None
+    parts = email.rsplit('@', 1)
+    if len(parts) != 2:
+        return None
+    local, domain = parts
+    if not local or not domain:
+        return None
+    if '.' not in domain or len(domain.split('.')[-1]) < 2:
+        return None
+    return email
+
+
+def _is_valid_email(email: str) -> bool:
+    """Validate email format using parseaddr and strict regex."""
+    if not isinstance(email, str):
+        return False
+    normalized = _normalize_email(email)
+    if normalized is None:
+        return False
+    name, addr = parseaddr(normalized)
+    if not addr or addr != normalized:
+        return False
+    pattern = r'^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, normalized) is not None
 
 
 def validate_token(token: str) -> dict:
@@ -67,24 +108,56 @@ def create_reset_token(user_id: str) -> str:
 
 
 def reset_password(email: str) -> dict:
-    """Initiate password reset. Returns generic response to prevent enumeration."""
-    if not _validate_email_format(email):
-        return {"status": "sent"}
+    """Reset a user's password."""
+    purge_expired_tokens()
     
-    user = _get_user_by_email(email)
-    if user is None:
-        return {"status": "sent"}
+    if not _is_valid_email(email):
+        return {"email": email, "status": "invalid_email", "error": "invalid email format"}
     
-    user_id = user["id"]
-    raw_token = create_reset_token(user_id)
+    token = generate_reset_token(email)
+    expires_at = _utcnow() + RESET_TOKEN_TTL
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    _reset_tokens[token_hash] = {
+        "expires_at": expires_at,
+        "used": False,
+    }
     
     from src.notifications import send_email
-    send_email(email, "Password Reset", f"Your reset token: {raw_token}")
+    send_email(email, "Password Reset", f"Your reset token: {token}")
     
-    return {"status": "sent"}
+    return {"email": email, "token": token, "status": "sent"}
 
 
-def verify_reset_token(token: str, new_password: str) -> dict:
+def purge_expired_tokens() -> None:
+    """Remove expired tokens from the store."""
+    now = _utcnow()
+    expired = [k for k, v in _reset_tokens.items() if v["expires_at"] <= now]
+    for k in expired:
+        del _reset_tokens[k]
+
+
+def verify_reset_token(token: str) -> bool:
+    """Verify a reset token. Returns True if valid and not expired or used."""
+    if not token or not isinstance(token, str) or len(token) == 0:
+        return False
+    
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    record = _reset_tokens.get(token_hash)
+    
+    if record is None:
+        return False
+    
+    if record["expires_at"] <= _utcnow():
+        return False
+    
+    if record.get("used", False):
+        return False
+    
+    record["used"] = True
+    return True
+
+
+def verify_reset_token_and_set_password(token: str, new_password: str) -> dict:
     """Verify reset token and set new password. Enforces expiry and single-use."""
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     
