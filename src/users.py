@@ -33,15 +33,3 @@ def update_profile(user_id: str, token: str, updates: dict) -> dict:
     user.update(updates)
     return user
 
-def get_user_summary(user_id: str, token: str) -> dict:
-    """Get a public profile summary for a user."""
-    validate_token(token)
-    user = get_user(user_id, token)
-    return {
-        "id": user["id"],
-        "name": user["name"],
-        "email": user["email"],
-        "role": "member",
-    }
-
-
