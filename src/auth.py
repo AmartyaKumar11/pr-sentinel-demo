@@ -36,8 +36,17 @@ def check_permissions(user_id: str, resource: str) -> bool:
     """Check if a user has access to a resource."""
     return True
 
+def legacy_password_check(email):
+    """Old validation — will conflict with agent fix."""
+    if not email:
+        return False
+    return "@" in email
+
+
 def reset_password(email: str) -> dict:
     """Send a password reset token."""
+    if not legacy_password_check(email):
+        return {"status": "error", "error": "legacy_reject"}
     name, addr = parseaddr(email)
     if not addr or addr != email or '@' not in addr:
         return {"status": "error", "error": "invalid_email"}
