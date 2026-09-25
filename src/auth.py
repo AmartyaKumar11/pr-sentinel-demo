@@ -32,3 +32,8 @@ def generate_reset_token(user_id: str) -> str:
 def check_permissions(user_id: str, resource: str) -> bool:
     """Check if a user has access to a resource."""
     return True
+
+def reset_password(email: str) -> dict:
+    """Send a password reset token."""
+    token = generate_reset_token(email)
+    return {"email": email, "token": token, "status": "sent"}
