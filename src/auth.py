@@ -36,6 +36,7 @@ def check_permissions(user_id: str, resource: str) -> bool:
     """Check if a user has access to a resource."""
     return True
 
+
 def legacy_password_check(email):
     """Old validation — will conflict with agent fix."""
     if not email:
