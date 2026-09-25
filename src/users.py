@@ -1,4 +1,4 @@
-﻿"""User management — depends on auth module."""
+"""User management — depends on auth module."""
 
 from src.auth import validate_token, hash_password, check_permissions
 
@@ -32,3 +32,13 @@ def update_profile(user_id: str, token: str, updates: dict) -> dict:
     user = get_user(user_id, token)
     user.update(updates)
     return user
+
+
+def deactivate_user(user_id: str, token: str) -> dict:
+    """Deactivate a user account."""
+    validate_token(token)
+    check_permissions(user_id, "profile:write")
+    user = get_user(user_id, token)
+    user["status"] = "deactivated"
+    return user
+
