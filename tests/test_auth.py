@@ -79,3 +79,100 @@ def test_expire_token_after_1_hour():
         validate_result = validate_reset_token(token)
         assert validate_result["status"] == "error"
         assert validate_result["error"] == "expired_token"
+
+
+def test_reset_token_first_use_succeeds():
+    from unittest.mock import patch
+    from src.auth import reset_password, validate_reset_token, _reset_tokens
+    
+    _reset_tokens.clear()
+    
+    with patch('src.notifications.send_email') as mock_send:
+        result = reset_password("user@example.com")
+        assert result["status"] == "sent"
+        
+        call_args = mock_send.call_args[0]
+        token = call_args[2].split(": ")[1]
+        
+        validate_result = validate_reset_token(token)
+        assert validate_result["status"] == "ok"
+        assert validate_result["email"] == "user@example.com"
+
+
+def test_reset_token_second_use_rejected():
+    from unittest.mock import patch
+    from src.auth import reset_password, validate_reset_token, _reset_tokens
+    
+    _reset_tokens.clear()
+    
+    with patch('src.notifications.send_email') as mock_send:
+        result = reset_password("user@example.com")
+        assert result["status"] == "sent"
+        
+        call_args = mock_send.call_args[0]
+        token = call_args[2].split(": ")[1]
+        
+        first_result = validate_reset_token(token)
+        assert first_result["status"] == "ok"
+        
+        second_result = validate_reset_token(token)
+        assert second_result["status"] == "error"
+        assert second_result["error"] == "invalid_token"
+
+
+def test_reset_token_expired_rejected():
+    from unittest.mock import patch
+    from datetime import datetime, timedelta, timezone
+    from src.auth import reset_password, validate_reset_token, _reset_tokens
+    
+    _reset_tokens.clear()
+    
+    with patch('src.notifications.send_email'):
+        result = reset_password("user@example.com")
+        assert result["status"] == "sent"
+    
+    token = list(_reset_tokens.keys())[0]
+    _reset_tokens[token]["expires_at"] = datetime.now(timezone.utc) - timedelta(seconds=1)
+    
+    validate_result = validate_reset_token(token)
+    assert validate_result["status"] == "error"
+    assert validate_result["error"] == "expired_token"
+    assert token not in _reset_tokens
+
+
+def test_reset_token_malformed_rejected():
+    from src.auth import validate_reset_token
+    
+    result = validate_reset_token("not-a-real-token")
+    assert result["status"] == "error"
+    assert result["error"] == "invalid_token"
+
+
+def test_reset_token_concurrent_replay():
+    from unittest.mock import patch
+    from concurrent.futures import ThreadPoolExecutor
+    from src.auth import reset_password, validate_reset_token, _reset_tokens
+    
+    _reset_tokens.clear()
+    
+    with patch('src.notifications.send_email') as mock_send:
+        result = reset_password("user@example.com")
+        assert result["status"] == "sent"
+        
+        call_args = mock_send.call_args[0]
+        token = call_args[2].split(": ")[1]
+        
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future1 = executor.submit(validate_reset_token, token)
+            future2 = executor.submit(validate_reset_token, token)
+            
+            result1 = future1.result()
+            result2 = future2.result()
+        
+        results = [result1, result2]
+        ok_results = [r for r in results if r["status"] == "ok"]
+        error_results = [r for r in results if r["status"] == "error"]
+        
+        assert len(ok_results) == 1
+        assert len(error_results) == 1
+        assert ok_results[0]["email"] == "user@example.com"

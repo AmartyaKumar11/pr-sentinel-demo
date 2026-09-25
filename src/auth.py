@@ -74,10 +74,10 @@ def reset_password(email: str) -> dict:
 
 def validate_reset_token(token: str) -> dict:
     """Validate a password reset token."""
-    if token not in _reset_tokens:
-        return {"status": "error", "error": "invalid_token"}
+    token_data = _reset_tokens.pop(token, None)
     
-    token_data = _reset_tokens[token]
+    if token_data is None:
+        return {"status": "error", "error": "invalid_token"}
     
     if token_data["used"]:
         return {"status": "error", "error": "used_token"}
@@ -86,8 +86,4 @@ def validate_reset_token(token: str) -> dict:
     if now >= token_data["expires_at"]:
         return {"status": "error", "error": "expired_token"}
     
-    token_data["used"] = True
-    email = token_data["email"]
-    del _reset_tokens[token]
-    
-    return {"status": "ok", "email": email}
+    return {"status": "ok", "email": token_data["email"]}
