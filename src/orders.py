@@ -7,11 +7,11 @@ from src.notifications import send_email
 
 def create_order(user_id: str, token: str, items: list, quantity: int) -> dict:
     """Create a new order."""
-    if quantity <= 0:
-        raise ValueError("Quantity must be greater than 0")
-    
     validate_token(token)
     user = get_user(user_id, token)
+
+    if quantity <= 0:
+        raise ValueError("Quantity must be positive")
 
     order = {
         "id": "order-123",

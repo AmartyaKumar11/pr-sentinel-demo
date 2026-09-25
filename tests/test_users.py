@@ -1,4 +1,4 @@
-﻿from src.users import get_user, create_user, get_user_status 
+﻿from src.users import get_user, create_user
 
 def test_get_user():
     user = get_user("123", "header.123.signature")

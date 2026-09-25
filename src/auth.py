@@ -6,6 +6,8 @@ import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
+from src.notifications import send_email
+
 
 def validate_token(token: str) -> dict:
     """Validate a JWT-like token. Called by users, orders, and admin."""
@@ -48,6 +50,8 @@ def _get_user_by_email(email: str) -> dict | None:
 
 def _validate_email_format(email: str) -> bool:
     """Validate email format using simple RFC 5322-style regex."""
+    if not isinstance(email, str):
+        return False
     if not email or len(email) > 254:
         return False
     pattern = r'^[^@\s]+@[^@\s]+\.[^@\s]+$'
@@ -78,24 +82,26 @@ def reset_password(email: str) -> dict:
     user_id = user["id"]
     raw_token = create_reset_token(user_id)
     
-    from src.notifications import send_email
     send_email(email, "Password Reset", f"Your reset token: {raw_token}")
     
     return {"status": "sent"}
 
 
-def verify_reset_token(token: str, new_password: str) -> dict:
-    """Verify reset token and set new password. Enforces expiry and single-use."""
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
+def verify_reset_token(raw_token: str) -> dict | None:
+    """Verify reset token. Returns record if valid, None if invalid/used/expired."""
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     
     record = _reset_tokens.get(token_hash)
     if record is None:
-        return {"success": False, "error": "Invalid or expired token"}
+        return None
+    
+    if record["used"]:
+        return None
     
     now = datetime.now(timezone.utc)
-    if record["used"] or record["expires_at"] <= now:
-        return {"success": False, "error": "Invalid or expired token"}
+    if record["expires_at"] <= now:
+        return None
     
     record["used"] = True
     
-    return {"success": True}
+    return record
