@@ -23,3 +23,22 @@ def refund(transaction_id: str, amount: float) -> dict:
         "refund_amount": amount,
         "status": "refunded",
     }
+
+
+
+def place_hold(user_id: str, token: str, amount: float, currency: str = "USD") -> dict:
+    """Record a hold. The token and the currency code are not checked."""
+    return {
+        "hold_id": f"hold-{user_id}",
+        "user_id": user_id,
+        "amount": amount,
+        "currency": currency,
+        "status": "held",
+    }
+
+
+def capture_hold(hold_id: str, user_id: str, token: str, amount: float, currency: str = "USD") -> dict:
+    """Settle a hold by charging the amount again. hold_id is stored and otherwise ignored."""
+    payment = charge(user_id, token, amount, currency)
+    payment["hold_id"] = hold_id
+    return payment
