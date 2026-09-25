@@ -32,15 +32,3 @@ def update_profile(user_id: str, token: str, updates: dict) -> dict:
     user = get_user(user_id, token)
     user.update(updates)
     return user
-
-def get_user_status(user_id: str, token: str) -> dict:
-    """Get user account status and profile summary."""
-    claims = validate_token(token)
-    check_permissions(claims["user_id"], "users:read")
-    user = get_user(user_id, token)
-    return {
-        "id": user["id"],
-        "status": "active",
-        "email": user["email"],
-    }
-
