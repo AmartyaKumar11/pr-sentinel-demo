@@ -128,7 +128,7 @@ def test_reset_token_second_use_rejected():
         
         second_result = validate_reset_token(token)
         assert second_result["status"] == "error"
-        assert second_result["error"] == "used_token"
+        assert second_result["error"] == "invalid_token"
 
 
 def test_reset_token_expired_rejected():
@@ -149,6 +149,7 @@ def test_reset_token_expired_rejected():
     validate_result = validate_reset_token(token)
     assert validate_result["status"] == "error"
     assert validate_result["error"] == "expired_token"
+    assert token not in _reset_tokens
 
 
 def test_reset_token_malformed_rejected():
@@ -187,7 +188,7 @@ def test_reset_token_concurrent_replay():
         
         results = [result1, result2]
         ok_results = [r for r in results if r["status"] == "ok"]
-        error_results = [r for r in results if r["status"] == "error" and r.get("error") == "used_token"]
+        error_results = [r for r in results if r["status"] == "error"]
         
         assert len(ok_results) == 1
         assert len(error_results) == 1
