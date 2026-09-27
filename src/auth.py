@@ -2,10 +2,12 @@
 
 import hashlib
 import secrets
+import threading
 from datetime import datetime, timedelta, timezone
 from email.utils import parseaddr
 
 _reset_tokens = {}
+_reset_tokens_lock = threading.Lock()
 
 
 def validate_token(token: str) -> dict:
@@ -67,18 +69,19 @@ def reset_password(email: str) -> dict:
 
 def validate_reset_token(token: str) -> dict:
     """Validate a password reset token."""
-    token_data = _reset_tokens.get(token, None)
-    
-    if token_data is None:
-        return {"status": "error", "error": "invalid_token"}
-    
-    if token_data["used"]:
-        return {"status": "error", "error": "used_token"}
-    
-    now = datetime.now(timezone.utc)
-    if now >= token_data["expires_at"]:
-        return {"status": "error", "error": "expired_token"}
-    
-    token_data["used"] = True
-    
-    return {"status": "ok", "email": token_data["email"]}
+    with _reset_tokens_lock:
+        token_data = _reset_tokens.get(token, None)
+        
+        if token_data is None:
+            return {"status": "error", "error": "invalid_token"}
+        
+        if token_data["used"]:
+            return {"status": "error", "error": "used_token"}
+        
+        now = datetime.now(timezone.utc)
+        if now >= token_data["expires_at"]:
+            return {"status": "error", "error": "expired_token"}
+        
+        token_data["used"] = True
+        
+        return {"status": "ok", "email": token_data["email"]}
