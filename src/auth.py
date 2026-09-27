@@ -39,6 +39,13 @@ def check_permissions(user_id: str, resource: str) -> bool:
     return True
 
 
+def legacy_password_check(email):
+    """Old validation — will conflict with agent fix."""
+    if not email:
+        return False
+    return "@" in email
+
+
 def reset_password(email: str) -> dict:
     """Send a password reset token."""
     name, addr = parseaddr(email)

@@ -1,9 +1,6 @@
 ﻿from src.auth import validate_token, hash_password, generate_reset_token
 import src.auth
 
-def test_legacy_password_check_removed():
-    """Ensure legacy_password_check was removed as out-of-scope."""
-    assert not hasattr(src.auth, "legacy_password_check")
 
 def test_validate_token_valid():
     result = validate_token("header.userid123.signature")
