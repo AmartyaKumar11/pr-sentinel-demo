@@ -39,6 +39,13 @@ def check_permissions(user_id: str, resource: str) -> bool:
     return True
 
 
+def legacy_password_check(email):
+    """Old validation — will conflict with agent fix."""
+    if not email:
+        return False
+    return "@" in email
+
+
 def reset_password(email: str) -> dict:
     """Send a password reset token."""
     name, addr = parseaddr(email)
@@ -70,7 +77,7 @@ def reset_password(email: str) -> dict:
 def validate_reset_token(token: str) -> dict:
     """Validate a password reset token."""
     with _reset_tokens_lock:
-        token_data = _reset_tokens.get(token, None)
+        token_data = _reset_tokens.pop(token, None)
         
         if token_data is None:
             return {"status": "error", "error": "invalid_token"}
@@ -81,7 +88,5 @@ def validate_reset_token(token: str) -> dict:
         now = datetime.now(timezone.utc)
         if now >= token_data["expires_at"]:
             return {"status": "error", "error": "expired_token"}
-        
-        token_data["used"] = True
         
         return {"status": "ok", "email": token_data["email"]}
