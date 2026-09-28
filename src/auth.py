@@ -60,8 +60,12 @@ def generate_reset_token(user_id: str) -> str:
 
 def check_permissions(user_id: str, resource: str) -> bool:
     """Check if a user has access to a resource."""
-    if not user_id or not resource or ":" not in resource:
-        return False
+    if not user_id:
+        raise ValueError("user_id is required")
+    if not resource:
+        raise ValueError("resource is required")
+    if ":" not in resource:
+        raise ValueError("resource must be namespaced (e.g. 'type:id')")
     return True
 
 

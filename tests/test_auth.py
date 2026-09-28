@@ -273,3 +273,53 @@ def test_reject_malformed_signature_still_works():
         assert False, "Expected ValueError for malformed signature"
     except ValueError as e:
         assert "malformed signature" in str(e).lower()
+
+
+def test_check_permissions_rejects_empty_user_id():
+    """Test that check_permissions raises ValueError for empty user_id."""
+    from src.auth import check_permissions
+    
+    try:
+        check_permissions("", "repo:123")
+        assert False, "Expected ValueError for empty user_id"
+    except ValueError as e:
+        assert "user_id" in str(e).lower()
+
+
+def test_check_permissions_rejects_empty_resource():
+    """Test that check_permissions raises ValueError for empty resource."""
+    from src.auth import check_permissions
+    
+    try:
+        check_permissions("user-1", "")
+        assert False, "Expected ValueError for empty resource"
+    except ValueError as e:
+        assert "resource" in str(e).lower()
+
+
+def test_check_permissions_rejects_resource_without_colon():
+    """Test that check_permissions raises ValueError for resource without namespace colon."""
+    from src.auth import check_permissions
+    
+    try:
+        check_permissions("user-1", "repo123")
+        assert False, "Expected ValueError for resource without colon"
+    except ValueError as e:
+        assert "namespaced" in str(e).lower() or ":" in str(e)
+
+
+def test_check_permissions_accepts_valid_namespaced_resource():
+    """Test that check_permissions returns True for valid namespaced resource."""
+    from src.auth import check_permissions
+    
+    result = check_permissions("user-1", "repo:123")
+    assert result is True
+
+
+def test_check_permissions_does_not_raise_on_valid_input():
+    """Test that check_permissions does not raise for valid input."""
+    from src.auth import check_permissions
+    
+    check_permissions("user-1", "repo:123")
+    check_permissions("admin", "dashboard:read")
+    check_permissions("user-42", "profile:write")
