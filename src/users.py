@@ -41,11 +41,3 @@ def get_user_status(user_id: str) -> dict:
         "status": "active",
         "demo_flag": True
     }
-
-def get_user_summary(user_id: str) -> dict:
-    """Return dummy status for a user."""
-    return {
-        "user_id": user_id,
-        "status": "active",
-        "demo_flag": True
-    }
