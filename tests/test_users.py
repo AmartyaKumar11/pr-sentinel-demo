@@ -22,13 +22,15 @@ def test_create_user():
     assert user["name"] == "Test"
     assert "password_hash" in user
 
-def test_get_user_summary_removed():
-    """Verify get_user_summary scope creep was removed."""
-    assert not hasattr(users, "get_user_summary")
+def test_get_user_status_removed():
+    """Verify get_user_status was removed from src.users."""
+    assert not hasattr(users, "get_user_status")
 
-def test_update_profile_unchanged():
-    """Verify update_profile still works after scope creep removal."""
+def test_update_profile_still_works():
+    """Ensure update_profile still works after removal."""
     token = _make_valid_token()
-    result = update_profile("456", token, {"name": "Updated Name"})
-    assert result["id"] == "456"
+    updates = {"name": "Updated Name", "email": "new@example.com"}
+    result = update_profile("123", token, updates)
+    assert result["id"] == "123"
     assert result["name"] == "Updated Name"
+    assert result["email"] == "new@example.com"
