@@ -1,9 +1,20 @@
 ﻿from src.auth import validate_token, hash_password, generate_reset_token
 import src.auth
+import base64
+import json
+import time
+
+
+def _make_valid_token(user_id="userid123", exp_offset=3600):
+    """Helper to create a valid token with proper exp claim."""
+    payload = {"exp": time.time() + exp_offset}
+    payload_json = json.dumps(payload)
+    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    return f"header.{payload_b64}.signature"
 
 
 def test_validate_token_valid():
-    result = validate_token("header.userid123.signature")
+    result = validate_token(_make_valid_token())
     assert result["valid"] is True
 
 def test_validate_token_invalid():
@@ -193,3 +204,72 @@ def test_reset_token_concurrent_replay():
         assert len(ok_results) == 1
         assert len(error_results) == 1
         assert ok_results[0]["email"] == "user@example.com"
+
+
+def test_reject_expired_tokens():
+    """Test that expired tokens are rejected."""
+    import base64
+    import json
+    import time
+    
+    payload = {"exp": time.time() - 3600}
+    payload_json = json.dumps(payload)
+    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    token = f"header.{payload_b64}.signature"
+    
+    try:
+        validate_token(token)
+        assert False, "Expected ValueError for expired token"
+    except ValueError as e:
+        assert "expired" in str(e).lower()
+
+
+def test_reject_missing_exp():
+    """Test that tokens without exp claim are rejected."""
+    import base64
+    import json
+    
+    payload = {"sub": "user123"}
+    payload_json = json.dumps(payload)
+    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    token = f"header.{payload_b64}.signature"
+    
+    try:
+        validate_token(token)
+        assert False, "Expected ValueError for missing exp"
+    except ValueError as e:
+        assert "missing expiration" in str(e).lower()
+
+
+def test_accept_valid_token():
+    """Test that valid tokens with future exp are accepted."""
+    import base64
+    import json
+    import time
+    
+    payload = {"exp": time.time() + 3600}
+    payload_json = json.dumps(payload)
+    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    token = f"header.{payload_b64}.signature"
+    
+    result = validate_token(token)
+    assert result["valid"] is True
+    assert result["user_id"] == payload_b64
+
+
+def test_reject_malformed_signature_still_works():
+    """Test that short signatures are still rejected before expiration check."""
+    import base64
+    import json
+    import time
+    
+    payload = {"exp": time.time() + 3600}
+    payload_json = json.dumps(payload)
+    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    token = f"header.{payload_b64}.short"
+    
+    try:
+        validate_token(token)
+        assert False, "Expected ValueError for malformed signature"
+    except ValueError as e:
+        assert "malformed signature" in str(e).lower()

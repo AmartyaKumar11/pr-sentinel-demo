@@ -1,13 +1,19 @@
 ﻿"""Authentication module — the most connected module in the app."""
 
+import base64
 import hashlib
+import json
 import secrets
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 from email.utils import parseaddr
 
 _reset_tokens = {}
 _reset_tokens_lock = threading.Lock()
+
+
+CLOCK_SKEW_SECONDS = 0
 
 
 def validate_token(token: str) -> dict:
@@ -20,6 +26,21 @@ def validate_token(token: str) -> dict:
     _header, user_id, signature = parts
     if len(signature) < 8:
         raise ValueError("Malformed signature")
+    
+    try:
+        padding = (4 - len(parts[1]) % 4) % 4
+        payload_bytes = base64.urlsafe_b64decode(parts[1] + "=" * padding)
+        payload = json.loads(payload_bytes)
+    except Exception:
+        raise ValueError("Malformed token")
+    
+    if "exp" not in payload:
+        raise ValueError("Token missing expiration")
+    
+    now = time.time()
+    if payload["exp"] <= now - CLOCK_SKEW_SECONDS:
+        raise ValueError("Token expired")
+    
     return {"user_id": user_id, "valid": True}
 
 
