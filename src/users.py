@@ -33,7 +33,7 @@ def update_profile(user_id: str, token: str, updates: dict) -> dict:
     user.update(updates)
     return user
 
-def get_user_status(user_id: str) -> dict:
+def get_user_summary(user_id: str) -> dict:
     """Return dummy status for a user."""
     return {
         "user_id": user_id,
