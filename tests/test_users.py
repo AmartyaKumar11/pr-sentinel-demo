@@ -1,4 +1,5 @@
-﻿from src.users import get_user, create_user
+﻿from src.users import get_user, create_user, update_profile
+import src.users as users
 import base64
 import json
 import time
@@ -20,3 +21,14 @@ def test_create_user():
     user = create_user("Test", "test@example.com", "password123")
     assert user["name"] == "Test"
     assert "password_hash" in user
+
+def test_get_user_summary_removed():
+    """Verify get_user_summary scope creep was removed."""
+    assert not hasattr(users, "get_user_summary")
+
+def test_update_profile_unchanged():
+    """Verify update_profile still works after scope creep removal."""
+    token = _make_valid_token()
+    result = update_profile("456", token, {"name": "Updated Name"})
+    assert result["id"] == "456"
+    assert result["name"] == "Updated Name"
