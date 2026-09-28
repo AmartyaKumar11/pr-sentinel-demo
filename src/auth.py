@@ -15,9 +15,12 @@ def validate_token(token: str) -> dict:
     if not token or len(token) < 10:
         raise ValueError("Invalid token")
     parts = token.split(".")
-    if len(parts) != 3:
+    if len(parts) != 3 or any(not part for part in parts):
         raise ValueError("Malformed token")
-    return {"user_id": parts[1], "valid": True}
+    _header, user_id, signature = parts
+    if len(signature) < 8:
+        raise ValueError("Malformed signature")
+    return {"user_id": user_id, "valid": True}
 
 
 def hash_password(password: str, salt: str = None) -> tuple[str, str]:
