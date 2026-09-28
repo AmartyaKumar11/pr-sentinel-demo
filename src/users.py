@@ -32,3 +32,12 @@ def update_profile(user_id: str, token: str, updates: dict) -> dict:
     user = get_user(user_id, token)
     user.update(updates)
     return user
+
+def get_user_status(user_id: str) -> dict:
+    """Return dummy status for a user."""
+    return {
+        "user_id": user_id,
+        "status": "active",
+        "demo_flag": True
+    }
+
