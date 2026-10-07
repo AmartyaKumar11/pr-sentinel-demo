@@ -8,9 +8,19 @@ def test_charge_rejects_a_non_positive_amount():
         charge("user-1", "token", 0)
 
 
+def test_charge_returns_the_amount():
+    result = charge("user-1", "token", 10)
+    assert result["amount"] == 10
+
+
 def test_refund_rejects_a_non_positive_amount():
     with pytest.raises(ValueError):
         refund("txn-456", -5)
+
+
+def test_refund_rejects_a_zero_amount():
+    with pytest.raises(ValueError):
+        refund("txn-456", 0)
 
 
 def test_refund_rejects_a_missing_transaction():
