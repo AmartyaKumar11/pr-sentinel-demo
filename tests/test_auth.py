@@ -323,3 +323,55 @@ def test_check_permissions_does_not_raise_on_valid_input():
     check_permissions("user-1", "repo:123")
     check_permissions("admin", "dashboard:read")
     check_permissions("user-42", "profile:write")
+
+
+def test_validate_token_accepts_unexpired_token():
+    """Test that validate_token accepts tokens with future expiration."""
+    now = time.time()
+    payload = {"exp": now + 60}
+    payload_json = json.dumps(payload)
+    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    token = f"header.{payload_b64}.signature"
+    
+    result = validate_token(token)
+    assert result["valid"] is True
+    assert result["user_id"] == payload_b64
+
+
+def test_validate_token_rejects_expired_token():
+    """Test that validate_token rejects tokens with past expiration."""
+    now = time.time()
+    payload = {"exp": now - 3600}
+    payload_json = json.dumps(payload)
+    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    token = f"header.{payload_b64}.signature"
+    
+    try:
+        validate_token(token)
+        assert False, "Expected ValueError for expired token"
+    except ValueError as e:
+        assert str(e) == "Token expired"
+
+
+def test_validate_token_respects_clock_skew():
+    """Test that validate_token respects CLOCK_SKEW_SECONDS."""
+    now = time.time()
+    
+    payload_within_skew = {"exp": now - (src.auth.CLOCK_SKEW_SECONDS - 1)}
+    payload_json = json.dumps(payload_within_skew)
+    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    token_within = f"header.{payload_b64}.signature"
+    
+    result = validate_token(token_within)
+    assert result["valid"] is True
+    
+    payload_outside_skew = {"exp": now - (src.auth.CLOCK_SKEW_SECONDS + 1)}
+    payload_json = json.dumps(payload_outside_skew)
+    payload_b64 = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    token_outside = f"header.{payload_b64}.signature"
+    
+    try:
+        validate_token(token_outside)
+        assert False, "Expected ValueError for token outside clock skew"
+    except ValueError as e:
+        assert str(e) == "Token expired"
