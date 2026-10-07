@@ -10,9 +10,6 @@ def create_order(user_id: str, token: str, items: list, quantity: int) -> dict:
     validate_token(token)
     user = get_user(user_id, token)
 
-    if quantity <= 0:
-        raise ValueError("Quantity must be positive")
-
     order = {
         "id": "order-123",
         "user_id": user_id,
