@@ -33,3 +33,14 @@ def update_profile(user_id: str, token: str, updates: dict) -> dict:
     user.update(updates)
     return user
 
+
+def deactivate_user(user_id: str, token: str) -> dict:
+    """Deactivate a user account."""
+    validate_token(token)
+    check_permissions(user_id, "users:write")
+    user = get_user(user_id, token)
+    return {
+        "id": user["id"],
+        "status": "deactivated",
+        "email": user["email"],
+    }
