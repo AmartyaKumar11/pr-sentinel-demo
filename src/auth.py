@@ -38,7 +38,7 @@ def validate_token(token: str) -> dict:
         raise ValueError("Token missing expiration")
     
     now = time.time()
-    if payload["exp"] > now - CLOCK_SKEW_SECONDS:
+    if payload["exp"] <= now - CLOCK_SKEW_SECONDS:
         raise ValueError("Token expired")
     
     return {"user_id": user_id, "valid": True}
