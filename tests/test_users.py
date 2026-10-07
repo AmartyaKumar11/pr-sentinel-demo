@@ -1,4 +1,4 @@
-﻿from src.users import get_user, create_user, update_profile
+from src.users import get_user, create_user, update_profile, deactivate_user
 
 import src.users as users
 import base64
@@ -35,3 +35,61 @@ def test_update_profile_still_works():
     assert result["id"] == "123"
     assert result["name"] == "Updated Name"
     assert result["email"] == "new@example.com"
+
+
+def test_deactivate_user():
+    token = _make_valid_token()
+    result = deactivate_user("123", token)
+    assert result["id"] == "123"
+    assert result["status"] == "deactivated"
+    
+    persisted_user = get_user("123", token)
+    assert persisted_user["status"] == "deactivated"
+
+
+def test_deactivate_user_requires_write_permission():
+    """Verify deactivation is blocked without users:write permission."""
+    from unittest.mock import patch
+    
+    token = _make_valid_token()
+    
+    with patch('src.users.check_permissions') as mock_check:
+        mock_check.side_effect = ValueError("Permission denied")
+        
+        try:
+            deactivate_user("456", token)
+            assert False, "Should have raised ValueError"
+        except ValueError:
+            pass
+        
+        persisted_user = get_user("456", token)
+        assert "status" not in persisted_user or persisted_user.get("status") != "deactivated"
+
+
+def test_deactivate_user_invalid_token():
+    """Verify deactivation is blocked with invalid token."""
+    invalid_token = "invalid.token.here"
+    
+    try:
+        deactivate_user("789", invalid_token)
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+    
+    valid_token = _make_valid_token()
+    persisted_user = get_user("789", valid_token)
+    assert "status" not in persisted_user or persisted_user.get("status") != "deactivated"
+
+
+def test_deactivate_user_idempotent():
+    """Verify deactivating an already-deactivated user is safe."""
+    token = _make_valid_token()
+    
+    result1 = deactivate_user("999", token)
+    assert result1["status"] == "deactivated"
+    
+    result2 = deactivate_user("999", token)
+    assert result2["status"] == "deactivated"
+    
+    persisted_user = get_user("999", token)
+    assert persisted_user["status"] == "deactivated"
