@@ -32,4 +32,3 @@ def update_profile(user_id: str, token: str, updates: dict) -> dict:
     user = get_user(user_id, token)
     user.update(updates)
     return user
-
