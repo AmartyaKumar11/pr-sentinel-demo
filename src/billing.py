@@ -18,6 +18,10 @@ def charge(user_id: str, token: str, amount: float, currency: str = "USD") -> di
 
 def refund(transaction_id: str, amount: float) -> dict:
     """Refund a transaction."""
+    if not transaction_id:
+        raise ValueError("Transaction id is required")
+    if amount <= 0:
+        raise ValueError("Amount must be positive")
     return {
         "transaction_id": transaction_id,
         "refund_amount": amount,
