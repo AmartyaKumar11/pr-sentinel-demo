@@ -7,8 +7,10 @@ logger = logging.getLogger(__name__)
 
 def send_email(to: str, subject: str, body: str) -> bool:
     """Send an email notification."""
-    domain = to.split("@", 1)[1] if isinstance(to, str) and "@" in to else ""
-    if not to or "@" not in to or "." not in domain:
+    if not to or not isinstance(to, str) or "@" not in to:
+        raise ValueError("Invalid email recipient")
+    parts = to.split("@", 1)
+    if len(parts) != 2 or not parts[1] or "." not in parts[1] or parts[1][0] == "@":
         raise ValueError("Invalid email recipient")
     if not subject:
         raise ValueError("Email subject is required")
