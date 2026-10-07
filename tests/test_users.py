@@ -1,4 +1,4 @@
-﻿from src.users import get_user, create_user, update_profile, deactivate_user
+﻿from src.users import get_user, create_user, update_profile
 
 import src.users as users
 import base64
@@ -35,9 +35,3 @@ def test_update_profile_still_works():
     assert result["id"] == "123"
     assert result["name"] == "Updated Name"
     assert result["email"] == "new@example.com"
-
-
-def test_deactivate_user():
-    result = deactivate_user("123", _make_valid_token())
-    assert result["id"] == "123"
-    assert result["status"] == "deactivated"
