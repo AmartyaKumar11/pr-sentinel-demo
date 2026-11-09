@@ -17,6 +17,7 @@ def _make_valid_token():
 
 
 def test_dashboard_returns_metrics_with_valid_token():
+    """Verify dashboard returns expected metrics when given a valid token."""
     token = _make_valid_token()
     result = dashboard(token)
     assert result == {
