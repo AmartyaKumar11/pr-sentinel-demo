@@ -1,3 +1,5 @@
+"""Tests for notification behavior."""
+
 from src.notifications import send_email, send_sms
 
 import src.notifications as notifications
