@@ -1,3 +1,4 @@
+"""Tests for the notifications module."""
 import logging
 
 import pytest
