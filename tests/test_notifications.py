@@ -1,4 +1,4 @@
-"""Tests for notification behavior."""
+"""Unit tests for notification behavior."""
 
 from src.notifications import send_email, send_sms
 
