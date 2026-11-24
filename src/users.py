@@ -24,7 +24,7 @@ def create_user(name: str, email: str, password: str) -> dict:
     return {
         "id": "new-user-id",
         "name": name,
-        "email": email,
+        "email": normalize_email(email),
         "password_hash": hashed,
         "salt": salt,
     }
