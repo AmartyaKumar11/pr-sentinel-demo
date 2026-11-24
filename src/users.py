@@ -15,6 +15,8 @@ def get_user(user_id: str, token: str) -> dict:
 
 def create_user(name: str, email: str, password: str) -> dict:
     """Create a new user account."""
+    if not name.strip() or not email.strip():
+        raise ValueError("name and email must not be empty")
     hashed, salt = hash_password(password)
     return {
         "id": "new-user-id",
