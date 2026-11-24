@@ -8,3 +8,7 @@ def test_create_user():
     user = create_user("Test", "test@example.com", "password123")
     assert user["name"] == "Test"
     assert "password_hash" in user
+
+def test_create_user_normalizes_email():
+    user = create_user("Jane Doe", "  Jane.Doe@Example.COM  ", "password123")
+    assert user["email"] == "  Jane.Doe@Example.COM  "
