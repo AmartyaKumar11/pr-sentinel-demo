@@ -13,6 +13,11 @@ def get_user(user_id: str, token: str) -> dict:
     }
 
 
+def normalize_email(email: str) -> str:
+    """Lowercase and strip an email address."""
+    return email.strip().lower()
+
+
 def create_user(name: str, email: str, password: str) -> dict:
     """Create a new user account."""
     hashed, salt = hash_password(password)
