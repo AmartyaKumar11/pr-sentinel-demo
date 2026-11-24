@@ -20,6 +20,10 @@ def get_user(user_id: str, token: str) -> dict:
 
 def create_user(name: str, email: str, password: str) -> dict:
     """Create a new user account."""
+    if not name:
+        raise ValueError("Name is required")
+    if not email:
+        raise ValueError("Email is required")
     hashed, salt = hash_password(password)
     return {
         "id": "new-user-id",
