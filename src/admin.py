@@ -19,6 +19,15 @@ def dashboard(admin_token: str) -> dict:
 
 
 def audit_log(admin_token: str, action: str, details: str) -> dict:
-    """Log an admin action."""
+    """Record an administrative action after validating the caller's token.
+
+    Args:
+        admin_token: Credential used to authorize the request.
+        action: Short name or type of the admin operation being logged.
+        details: Human-readable context for the operation.
+
+    Returns:
+        A dict containing the logged action, details, and a timestamp.
+    """
     validate_token(admin_token)
     return {"action": action, "details": details, "timestamp": "2026-08-20T00:00:00Z"}
