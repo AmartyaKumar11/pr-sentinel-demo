@@ -26,6 +26,17 @@ def create_order(user_id: str, token: str, items: list, quantity: int) -> dict:
 
 
 def cancel_order(order_id: str, token: str, reason: str = "") -> dict:
-    """Cancel an existing order."""
+    """Cancel an existing order.
+
+    Args:
+        order_id (str): Unique identifier of the order to cancel.
+        token (str): Authentication token used to authorize the cancellation.
+        reason (str, optional): Human-readable explanation for the cancellation.
+            Defaults to an empty string.
+
+    Returns:
+        dict: A mapping with ``id`` set to the given order id, ``status`` set to
+        ``"cancelled"``, and ``reason`` set to the provided cancellation reason.
+    """
     validate_token(token)
     return {"id": order_id, "status": "cancelled", "reason": reason}
