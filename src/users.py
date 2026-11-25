@@ -51,3 +51,8 @@ def deactivate_user(user_id: str, token: str) -> dict:
         "status": user["status"],
         "email": user["email"],
     }
+
+
+def normalize_email(email: str) -> str:
+    """Normalize an email address."""
+    return email.strip().lower()
