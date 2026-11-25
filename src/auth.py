@@ -45,7 +45,19 @@ def validate_token(token: str) -> dict:
 
 
 def hash_password(password: str, salt: str = None) -> tuple[str, str]:
-    """Hash a password with a salt."""
+    """Derive a salted password hash suitable for storage and verification.
+
+    Computes a SHA-256 hex digest of the given password prefixed by a salt.
+    When ``salt`` is not provided, a new cryptographically random salt is generated.
+
+    Args:
+        password: Plaintext password to hash.
+        salt: Optional hex salt; if omitted, a new random salt is created.
+
+    Returns:
+        A ``(hashed_password, salt)`` tuple where ``hashed_password`` is the
+        hex-encoded digest and ``salt`` is the salt used (new or as passed in).
+    """
     if salt is None:
         salt = secrets.token_hex(16)
     hashed = hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
