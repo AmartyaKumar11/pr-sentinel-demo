@@ -21,7 +21,25 @@ def charge(user_id: str, token: str, amount: float, currency: str = "USD") -> di
 
 
 def refund(transaction_id: str, amount: float) -> dict:
-    """Refund a transaction."""
+    """Refund part or all of a prior charge identified by transaction id.
+
+    Args:
+        transaction_id: Identifier of the charge transaction to refund.
+            Must be non-empty; falsy values are rejected.
+        amount: Monetary amount to refund. Must be strictly greater than zero.
+
+    Returns:
+        A dict with keys:
+            transaction_id: Echo of the refunded transaction id.
+            refund_amount: The refunded amount.
+            status: Always ``"refunded"``.
+
+    Raises:
+        ValueError: If ``transaction_id`` is missing or empty
+            (message: ``"Transaction id is required"``).
+        ValueError: If ``amount`` is zero or negative
+            (message: ``"Amount must be positive"``).
+    """
     if not transaction_id:
         raise ValueError("Transaction id is required")
     if amount <= 0:
