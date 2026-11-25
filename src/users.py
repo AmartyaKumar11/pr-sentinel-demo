@@ -40,7 +40,16 @@ def update_profile(user_id: str, token: str, updates: dict) -> dict:
 
 
 def deactivate_user(user_id: str, token: str) -> dict:
-    """Deactivate a user account."""
+    """Mark a user account as deactivated.
+
+    Args:
+        user_id (str): Identifier of the user to deactivate.
+        token (str): Bearer token used to authenticate the caller; must be valid.
+
+    Returns:
+        dict: Summary of the deactivated user with keys ``id`` (str), ``status``
+            (str, set to ``"deactivated"``), and ``email`` (str).
+    """
     validate_token(token)
     check_permissions(user_id, "users:write")
     user = get_user(user_id, token)
