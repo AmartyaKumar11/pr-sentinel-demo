@@ -12,6 +12,11 @@ def send_email(to: str, subject: str, body: str) -> bool:
 
 
 def send_sms(phone: str, message: str) -> bool:
-    """Send an SMS notification."""
+    """Send an SMS notification.
+
+    Args:
+        phone (str): The recipient's phone number to send the SMS to.
+        message (str): The text content of the SMS 
+    """
     logger.info(f"Sending SMS to {phone}: {message}")
     return True
