@@ -1,4 +1,4 @@
-﻿"""User management — depends on auth module."""
+﻿"""User accounts: fetch and update profiles, create users, and deactivate accounts, with auth for tokens and permissions."""
 
 from src.auth import validate_token, hash_password, check_permissions
 
