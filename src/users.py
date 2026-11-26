@@ -1,4 +1,7 @@
-﻿"""User management — depends on auth module."""
+﻿"""User account operations: fetch profiles, register users, update profiles, and deactivate accounts.
+
+Delegates authentication (token validation, password hashing, permission checks) to ``src.auth``.
+"""
 
 from src.auth import validate_token, hash_password, check_permissions
 
