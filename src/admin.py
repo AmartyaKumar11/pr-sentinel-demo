@@ -19,6 +19,23 @@ def dashboard(admin_token: str) -> dict:
 
 
 def audit_log(admin_token: str, action: str, details: str) -> dict:
-    """Log an admin action."""
+    """Record an admin action after validating the caller's token.
+
+    Validates ``admin_token`` with the auth layer, then builds a structured
+    log entry containing the supplied action and details plus a timestamp.
+
+    Args:
+        admin_token: Bearer or session token used to authenticate the admin
+            caller; must pass ``validate_token``.
+        action: Short identifier or name of the administrative operation being
+            logged (for example, ``"user.delete"`` or ``"settings.update"``).
+        details: Free-form text describing context for the action (targets,
+            parameters, or other relevant information).
+
+    Returns:
+        A mapping with keys ``"action"``, ``"details"``, and ``"timestamp"``.
+        ``"action"`` and ``"details"`` echo the input arguments; ``"timestamp"``
+        is an ISO 8601 UTC timestamp string for when the entry was recorded.
+    """
     validate_token(admin_token)
     return {"action": action, "details": details, "timestamp": "2026-08-20T00:00:00Z"}
